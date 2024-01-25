@@ -24,7 +24,7 @@ interface ChatMessage {
   message: string;
 }
 
-function SendIcon(props) {
+function SendIcon(props: any) {
   return (
     <svg
       {...props}
@@ -46,11 +46,11 @@ function SendIcon(props) {
 
 export default function Home() {
   const [walletAddress, setWalletAddress] = useState()
-  const [chainId, setChainId] = useState()
+  const [chainId, setChainId] = useState('')
   const [isWalletLoading, setIsWalletLoading] = useState<boolean>(false)
   const [sessionId, setSessionId] = useState()
   const [message, setMessage] = useState('')
-  const [chat, setChat] = useState<ChatMessage[]>([])
+  const [chat, setChat] = useState<any[]>([])
 
   const connectKeplr = async () => {
     try {
@@ -156,8 +156,8 @@ export default function Home() {
     } catch (error: any) {
       console.error(error)
       if (error?.response) {
-        console.log(err.response.data.message)
-        setAddress('')
+        console.log(error?.response)
+        setWalletAddress(undefined)
         return false
       }
       console.log(error.message)
@@ -175,7 +175,7 @@ export default function Home() {
 
   useEffect(() => {
     if (chat.length) {
-      window.scrollTo(0, window.document.body.scrollHeight)
+      window.scrollTo(0, 0);
     }
     console.log('chat ==>', chat)
   }, [chat])

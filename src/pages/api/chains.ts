@@ -1,7 +1,7 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-type Data = {
+type ChainData = {
   id: string;
   name: string;
   network: string;
@@ -17,21 +17,20 @@ type Data = {
 
 export default function handler(
   req: NextApiRequest,
-  res: NextApiResponse<Data>
+  res: NextApiResponse<ChainData>
 ) {
-  res.status(200).json({ chains: [
+  res.status(200).json(
     {
-        id: "theta-testnet-001",
+        id: "Oraichain-testnet",
         name: "Cosmos Hub Testnet",
         network: "testnet",
-        rpc: "https://rpc.sentry-02.theta-testnet.polypore.xyz",
-        rest: "https://rest.sentry-02.theta-testnet.polypore.xyz",
+        rpc: "https://testnet-rpc.orai.io",
+        rest: "https://testnet-lcd.orai.io",
         denom: "ATOM",
-        minimalDenom: "uatom",
+        minimalDenominator: "uatom",
         decimals: 6,
-        prefix: "cosmos",
+        prefix: "orai",
         gasFee: "0.05uatom",
         createdAt: new Date().toISOString()
-    }
-] })
+  })
 }

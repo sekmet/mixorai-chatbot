@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 export function Chat({
     who,
     message,
@@ -7,15 +9,16 @@ export function Chat({
   }) {
     return ( 
         <div className="flex items-start gap-4 mb-4">
-        <img
+        <Image
           className="rounded-full"
-          height="50"
           src={`https://eu.ui-avatars.com/api/?name=${who === 'You' ? 'you' : 'bot'}&size=50`}
           style={{
             aspectRatio: "50/50",
             objectFit: "cover",
           }}
-          width="50"
+          width={50}
+          height={50}
+          alt="avatar"
         />
         <div className="flex flex-col">
           <div className="text-white">{who === 'You' ? 'You' : 'Mixorai Bot'}</div>

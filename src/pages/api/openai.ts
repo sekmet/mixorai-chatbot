@@ -17,9 +17,9 @@ export default async function handler(
       });
 
       const chatCompletion = await openai.chat.completions.create({
-        messages: [{ 
-            role: "system", content: "You are a friendly assistent!",
-            role: "user", content: message ? message : 'I dont know what to say'}
+        messages: [
+            {role: "system", content: "You are a friendly assistent!"},
+            {role: "user", content: message ? message : 'I dont know what to say'}
         ],
         model: 'gpt-4',
       });
