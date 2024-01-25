@@ -10,7 +10,12 @@
     "lint:fix": "next lint --fix"
   },
   "dependencies": {
+    "@cosmjs/cosmwasm-stargate": "^0.32.2",
     "@cosmjs/stargate": "^0.32.2",
+    "@mistralai/mistralai": "^0.0.10",
+    "@oraichain/common-contracts-sdk": "^1.0.31",
+    "@oraichain/oraidex-common": "^1.0.63",
+    "@oraichain/oraidex-contracts-sdk": "^1.0.31",
     "@radix-ui/react-scroll-area": "^1.0.5",
     "@radix-ui/react-select": "^2.0.0",
     "@radix-ui/react-slot": "^1.0.2",
@@ -26,12 +31,15 @@
     "react": "^18",
     "react-dom": "^18",
     "react-toastify": "^10.0.4",
+    "sqlite3": "^5.1.7",
     "tailwind-merge": "^2.2.1",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
     "typescript": "^5",
-    "@types/node": "^20",
+    "@owallet/types": "^0.0.2",
+    "@types/node": "^20.11.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.0.1",

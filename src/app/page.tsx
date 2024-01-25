@@ -18,6 +18,8 @@ import { Input } from "@/components/ui/input"
 import axios from "axios"
 import { useEffect, useState } from 'react'
 import { ellipsisAddress } from '@/lib/utils';
+import { loadNativeBalance } from '@/hooks/useBalance';
+import { useAppPersistStore } from '@/store/app';
 
 interface ChatMessage {
   who: string;
@@ -51,6 +53,25 @@ export default function Home() {
   const [sessionId, setSessionId] = useState()
   const [message, setMessage] = useState('')
   const [chat, setChat] = useState<any[]>([])
+  const wallet = useAppPersistStore((state) => state.wallet);
+  const setWallet = useAppPersistStore((state) => state.setWallet);
+
+
+  const chains = [
+    {
+      id: "Oraichain-testnet",
+      name: "Oraichain Testnet",
+      network: "testnet",
+      rpc: "https://testnet-rpc.orai.io",
+      rest: "https://testnet-lcd.orai.io",
+      denom: "ORAI",
+      minimalDenominator: "orai",
+      decimals: 6,
+      prefix: "orai",
+      gasFee: "0.002orai",
+      createdAt: new Date().toISOString()
+}]
+
 
   const connectKeplr = async () => {
     try {
@@ -81,9 +102,34 @@ export default function Home() {
       setWalletAddress(address)
       //setSessionId(data ? data.id : '')
       setIsWalletLoading(false)
+
+      //console.log('defaultRegistryTypes ===> ', defaultRegistryTypes)
     } catch (error: any) {
       //alert('Something wrong')
-      console.error(error)
+      console.log(error)
+      setIsWalletLoading(false)
+    }
+  }
+
+  const disconnectKeplr = async () => {
+    try {
+      if (!window.keplr) {
+        //alert('Please install OWallet Extension')
+        return false;
+      }
+
+      if (!chainId) {
+        //alert('Please select chain before continue')
+        return false;
+      }
+
+      setWallet(null);
+      //await window.keplr?.disable(chainId)
+      window.location.reload();
+
+    } catch (error: any) {
+      //console.log('Something went wrong')
+      console.log(error)
       setIsWalletLoading(false)
     }
   }
@@ -103,13 +149,129 @@ export default function Home() {
 
 
   async function sendMessage(message: string): Promise<any> {
-    const apiUrl = `http://localhost:3000/api/openai`;
-
+    const apiUrl = `http://localhost:3000/api/mistral`;
     try {
+      console.log('Sending message...', message)
       const response = await axios.post(apiUrl, { message });
+      
       return response.data;
     } catch (error: any) {
       console.error('Error message data:', error);
+    }
+  }
+
+  //action: Action,
+  //actionItems: ActionInput[]
+  const handleTransaction = async (
+    action: any,
+    actionItems: any[]
+  ) => {
+    try {
+      if (!window.keplr) {
+        console.log('Please install OWallet Extension')
+        return false;
+      }
+
+      if (!chainId) {
+        console.log('Please select chain')
+        return false;
+      }
+
+      if (!walletAddress) {
+        console.log('Wallet address not found')
+        return false;
+      }
+
+      const offlineSigner = window.keplr.getOfflineSigner(chainId)
+      const chain = chains?.find((item) => item.id === chainId)
+
+      if (!chain) {
+        console.log('Chain not found')
+        return false;
+      }
+      const client = await SigningStargateClient.connectWithSigner(
+        chain.rpc,
+        offlineSigner
+      )
+
+      if (action.name !== 'MsgTransfer') {
+        console.log('Unknown type')
+        return false;
+      }
+
+      const fromAddress = actionItems.find(
+        (item) => item.name === 'fromAddress'
+      )
+      const amount = actionItems.find((item) => item.name === 'amount')
+      const denom = actionItems.find((item) => item.name === 'denom')
+      const toAddress = actionItems.find((item) => item.name === 'toAddress')
+
+      if (!fromAddress || !amount || !denom || !toAddress) {
+        console.log('Error: action missing paramaters')
+        return false;
+      }
+      const foundMsgType = defaultRegistryTypes.find(
+        (element) => element[0] === action.url
+      )
+      if (!foundMsgType) {
+        console.log('Msg type not found')
+        return false;
+      }
+      const finalMsg = {
+        typeUrl: foundMsgType[0],
+        value: {
+          fromAddress: fromAddress.value,
+          toAddress: toAddress.value,
+          amount: coins(amount.value, denom.value),
+        },
+      }
+      const gasEstimation = await client.simulate(
+        walletAddress,
+        [finalMsg],
+        'MixOrai'
+      )
+      const fee = calculateFee(
+        Math.round(gasEstimation * 1.7), // gasEstimation * feeMultiplier
+        GasPrice.fromString(chain.gasFee) // Set default Gas price
+      )
+      const result = await client.signAndBroadcast(
+        walletAddress,
+        [finalMsg],
+        fee,
+        'MixOrai'
+      )
+      if (result) {
+        console.log({
+          title: 'Success',
+          description: `Tx Hash ${result.transactionHash}`,
+          status: 'success',
+          isClosable: true,
+          position: 'top',
+          duration: 20000,
+        })
+        if (result.code === 0) {
+          setChat((oldChat) => [
+            ...oldChat,
+            {
+              name: 'MixOrai',
+              message: `Sent ${amount.value}${denom.value} to ${toAddress.value} \n
+              Tx Hash ${result.transactionHash}`,
+            },
+          ])
+        } else {
+          setChat((oldChat) => [
+            ...oldChat,
+            {
+              name: 'MixOrai',
+              message: `Unexpected error, Tx Hash ${result.transactionHash}`,
+            },
+          ])
+        }
+      }
+      console.log(result)
+    } catch (err) {
+      //alert('Something wrong')
+      console.log(err)
     }
   }
 
@@ -126,7 +288,6 @@ export default function Home() {
         return false;
       }
 
-      console.log('Send message...')
       setChat((oldChat) => [
         ...oldChat,
         {
@@ -134,12 +295,14 @@ export default function Home() {
           message,
         },
       ])
+    
       setMessage('')
-
+      
       const nlu = await verifyNluMessage(message);
 
-      console.log('nlu', nlu)
+      console.log('nlu', nlu?.intent?.intentName)
 
+      if (nlu?.intent?.intentName === null) {
       const data = await sendMessage(message)
       if (data && data.message) {
         setChat((oldChat) => [
@@ -151,7 +314,54 @@ export default function Home() {
         ])
       }
 
-      setMessage('')
+    } else {
+
+      const data = await sendMessage(`% Extract the intentName, probability and entity's rawValue field value and format your response as json: {"intentName":"probability", "entities": [entity[rawValue]]} from: ${JSON.stringify(nlu)} . % return only the json %`)
+      const response = data.message
+
+      if (response) {
+      console.log('response ==>', JSON.parse(response));
+
+      console.log(response?.intent?.intentName, nlu?.intent?.intentName, response?.intent?.intentName === nlu?.intent?.intentName && response?.intent?.intentName === 'checkMyBalance')
+
+      }
+
+      if (nlu?.intent?.intentName === 'checkMyBalance' && wallet){
+        const msg = `Your current balance is ${(Number(wallet.balance)/1000000).toFixed(3)} ORAI`;
+
+        if (msg) {
+          setChat((oldChat) => [
+            ...oldChat,
+            {
+              name: 'MixOrai',
+              message: msg,
+            },
+          ])
+        }
+
+      } else if (nlu?.intent?.intentName === 'transferAtom') {
+
+        if (data?.action && data?.actionItems.length) {
+          handleTransaction(data.action, data.actionItems)
+        }
+
+      } else {
+
+      if (data && data.message) {
+        setChat((oldChat) => [
+          ...oldChat,
+          {
+            name: 'MixOrai',
+            message: data.message,
+          },
+        ])
+      }
+
+    }
+
+    /// end llm support
+    }
+
 
     } catch (error: any) {
       console.error(error)
@@ -176,15 +386,30 @@ export default function Home() {
     //if (chains && chains.length) {
       //setChainId(chains[0].id)
       setChainId('Oraichain-testnet')
+      if (walletAddress) {
+        const cwStargate = {
+          chainId: 'Oraichain',
+          rpc: 'https://testnet-rpc.orai.io'
+        }
+
+        const currentBalance = loadNativeBalance(walletAddress, cwStargate);
+        currentBalance.then((mybalance) => {
+          console.log('mybalance ', mybalance)
+          setWallet({address: walletAddress, balance: mybalance ? mybalance?.orai : 0 });
+        })
+        
+      }
     //}
-  }, [])
+  }, [walletAddress])
 
   useEffect(() => {
+    if (wallet !== null) {
+      connectKeplr()
+    }
     if (chat.length) {
       window.scrollTo(0, 0);
     }
-    console.log('chat ==>', chat)
-  }, [chat])
+  }, [chat, wallet])
 
   return (
 <main  className="flex flex-col h-screen bg-gray-800">
@@ -205,6 +430,7 @@ export default function Home() {
             <>
                   <span className="pl-3 flex justify-center text-white">{ellipsisAddress(walletAddress)}</span>
                   <Button 
+                  onClick={() => disconnectKeplr()}
                   size={'sm'}
           className="ml-0 mt-1 sm:mt-0 bg-red-500 text-white hover:bg-red-600 sm:ml-2">
             X

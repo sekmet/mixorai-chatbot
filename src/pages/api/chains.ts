@@ -22,15 +22,15 @@ export default function handler(
   res.status(200).json(
     {
         id: "Oraichain-testnet",
-        name: "Cosmos Hub Testnet",
+        name: "Oraichain Testnet",
         network: "testnet",
         rpc: "https://testnet-rpc.orai.io",
         rest: "https://testnet-lcd.orai.io",
-        denom: "ATOM",
-        minimalDenominator: "uatom",
+        denom: "ORAI",
+        minimalDenominator: "uorai",
         decimals: 6,
         prefix: "orai",
-        gasFee: "0.05uatom",
+        gasFee: "0.05uorai",
         createdAt: new Date().toISOString()
   })
 }

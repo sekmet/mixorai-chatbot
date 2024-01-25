@@ -9,7 +9,7 @@ export default async function handler(
     const { message } = req.body;
 
     const openai = new OpenAI({
-        apiKey: "not-needed",
+        apiKey: "not-needed-key",
         baseURL: "http://localhost:8000/v1",
         defaultHeaders:{
           "Content-Type": "application/json"
@@ -25,5 +25,5 @@ export default async function handler(
       });
     
 
-  res.status(200).json({who: 'Bot', message: `${chatCompletion.choices[0].message.content}`.replace("\n","***")})
+  res.status(200).json({who: 'Bot', message: chatCompletion.choices[0].message.content})
 }
