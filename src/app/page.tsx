@@ -164,6 +164,12 @@ export default function Home() {
     }
   }
 
+  const handleEnterSendMessage = (key: string) => {
+    if (key === 'Enter') {
+      handleSendMessage()
+    }
+  }
+
   //const { data: chains } = useChains()
 
   useEffect(() => {
@@ -264,6 +270,7 @@ export default function Home() {
         className="flex-grow rounded-lg bg-gray-700 border-0 text-white sm:text-lg" 
         placeholder="Message MixOrai..."
         onChange={(e) => setMessage(e.target.value)}
+        onKeyDown={(e) => handleEnterSendMessage(e.key)}
         value={message}
         />
         <Button size={'lg'} className="ml-4 bg-blue-500 text-white hover:bg-blue-600 sm:ml-6" onClick={() => handleSendMessage()} >
