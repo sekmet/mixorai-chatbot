@@ -75,7 +75,7 @@ export default function Home() {
 
   const connectKeplr = async () => {
     try {
-      if (!window.keplr) {
+      if (!window.owallet) {
         //alert('Please install OWallet Extension')
         return false;
       }
@@ -86,8 +86,8 @@ export default function Home() {
       }
 
       setIsWalletLoading(true)
-      await window.keplr?.enable(chainId)
-      const offlineSigner = window.keplr?.getOfflineSigner(chainId)
+      await window.owallet?.enable(chainId)
+      const offlineSigner = window.owallet?.getOfflineSigner(chainId)
 
       const accounts = await offlineSigner?.getAccounts()
       if (!accounts?.length) {
@@ -113,7 +113,7 @@ export default function Home() {
 
   const disconnectKeplr = async () => {
     try {
-      if (!window.keplr) {
+      if (!window.owallet) {
         //alert('Please install OWallet Extension')
         return false;
       }
@@ -124,7 +124,7 @@ export default function Home() {
       }
 
       setWallet(null);
-      //await window.keplr?.disable(chainId)
+      //await window.owallet?.disable(chainId)
       window.location.reload();
 
     } catch (error: any) {
@@ -160,6 +160,19 @@ export default function Home() {
     }
   }
 
+  async function sendMessageJson(message: string): Promise<any> {
+    const apiUrl = `http://localhost:3000/api/mistraljson`;
+    try {
+      console.log('Sending json message...', message)
+      const response = await axios.post(apiUrl, { message });
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Error message data:', error);
+    }
+  }
+
+
   //action: Action,
   //actionItems: ActionInput[]
   const handleTransaction = async (
@@ -167,7 +180,7 @@ export default function Home() {
     actionItems: any[]
   ) => {
     try {
-      if (!window.keplr) {
+      if (!window.owallet) {
         console.log('Please install OWallet Extension')
         return false;
       }
@@ -182,7 +195,7 @@ export default function Home() {
         return false;
       }
 
-      const offlineSigner = window.keplr.getOfflineSigner(chainId)
+      const offlineSigner = window.owallet.getOfflineSigner(chainId)
       const chain = chains?.find((item) => item.id === chainId)
 
       if (!chain) {
@@ -194,7 +207,7 @@ export default function Home() {
         offlineSigner
       )
 
-      if (action.name !== 'MsgTransfer') {
+      if (action.name !== 'MsgSend') {
         console.log('Unknown type')
         return false;
       }
@@ -210,52 +223,28 @@ export default function Home() {
         console.log('Error: action missing paramaters')
         return false;
       }
-      const foundMsgType = defaultRegistryTypes.find(
-        (element) => element[0] === action.url
-      )
-      if (!foundMsgType) {
-        console.log('Msg type not found')
-        return false;
-      }
-      const finalMsg = {
-        typeUrl: foundMsgType[0],
-        value: {
-          fromAddress: fromAddress.value,
-          toAddress: toAddress.value,
-          amount: coins(amount.value, denom.value),
-        },
-      }
-      const gasEstimation = await client.simulate(
-        walletAddress,
-        [finalMsg],
-        'MixOrai'
-      )
+
       const fee = calculateFee(
-        Math.round(gasEstimation * 1.7), // gasEstimation * feeMultiplier
+        Math.round(45719 * 1.7), // gasEstimation * feeMultiplier
         GasPrice.fromString(chain.gasFee) // Set default Gas price
       )
-      const result = await client.signAndBroadcast(
-        walletAddress,
-        [finalMsg],
-        fee,
-        'MixOrai'
-      )
+
+      const amountCoins = coins(amount.value, denom.value);
+
+      const result = await client.sendTokens(fromAddress.value, toAddress.value, amountCoins, fee, 'MixOrai');
+     
       if (result) {
         console.log({
-          title: 'Success',
           description: `Tx Hash ${result.transactionHash}`,
-          status: 'success',
-          isClosable: true,
-          position: 'top',
-          duration: 20000,
+          status: 'success'
         })
         if (result.code === 0) {
           setChat((oldChat) => [
             ...oldChat,
             {
               name: 'MixOrai',
-              message: `Sent ${amount.value}${denom.value} to ${toAddress.value} \n
-              Tx Hash ${result.transactionHash}`,
+              message: `Sent ${amount.value} ${denom.value} to ${toAddress.value} \n
+              Tx Hash: ${result.transactionHash}`,
             },
           ])
         } else {
@@ -263,14 +252,14 @@ export default function Home() {
             ...oldChat,
             {
               name: 'MixOrai',
-              message: `Unexpected error, Tx Hash ${result.transactionHash}`,
+              message: `ERROR - Tx Hash ${result.transactionHash}`,
             },
           ])
         }
       }
       console.log(result)
     } catch (err) {
-      //alert('Something wrong')
+      //alert('Something went wrong')
       console.log(err)
     }
   }
@@ -316,8 +305,8 @@ export default function Home() {
 
     } else {
 
-      const data = await sendMessage(`% Extract the intentName, probability and entity's rawValue field value and format your response as json: {"intentName":"probability", "entities": [entity[rawValue]]} from: ${JSON.stringify(nlu)} . % return only the json %`)
-      const response = data.message
+      const data = await sendMessageJson(`% Extract the intentName, probability and entity's rawValues from: ${JSON.stringify(nlu)}`)
+      const response = JSON.stringify(data.message);
 
       if (response) {
       console.log('response ==>', JSON.parse(response));
@@ -339,7 +328,7 @@ export default function Home() {
           ])
         }
 
-      } else if (nlu?.intent?.intentName === 'transferAtom') {
+      } else if (nlu?.intent?.intentName === 'transferCoin') {
 
         if (data?.action && data?.actionItems.length) {
           handleTransaction(data.action, data.actionItems)
