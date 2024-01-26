@@ -308,13 +308,6 @@ export default function Home() {
       const data = await sendMessageJson(`% Extract the intentName, probability and entity's rawValues from: ${JSON.stringify(nlu)}`)
       const response = JSON.stringify(data.message);
 
-      if (response) {
-      console.log('response ==>', JSON.parse(response));
-
-      console.log(response?.intent?.intentName, nlu?.intent?.intentName, response?.intent?.intentName === nlu?.intent?.intentName && response?.intent?.intentName === 'checkMyBalance')
-
-      }
-
       if (nlu?.intent?.intentName === 'checkMyBalance' && wallet){
         const msg = `Your current balance is ${(Number(wallet.balance)/1000000).toFixed(3)} ORAI`;
 
